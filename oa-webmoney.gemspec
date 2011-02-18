@@ -25,8 +25,9 @@ Gem::Specification.new do |s|
     "README.md",
     "Rakefile",
     "VERSION",
-    "lib/omniauth/oa-webmoney.rb",
-    "lib/omniauth/strategies/webmoney.rb",
+    "lib/oa-webmoney.rb",
+    "lib/oa-webmoney/webmoney.rb",
+    "oa-webmoney.gemspec",
     "spec/oa-webmoney_spec.rb",
     "spec/spec_helper.rb"
   ]
