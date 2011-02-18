@@ -4,6 +4,9 @@ module OmniAuth
   module Strategies
     class Webmoney
       include OmniAuth::Strategy
+      class WmLib
+        include ::Webmoney
+      end
 
       ERROR_MESSAGES = {
         # -3 unknown response
@@ -40,7 +43,7 @@ module OmniAuth
         :ip_differs           => "Ip address in the request differs from the address, which was an authorized user"
       }
 
-      def initialize(app, options = {})
+      def initialize(app, opts = {})
         @credentials = opts[:credentials]
         @mode = opts[:mode]
         @wm_instance = if defined?(Rails)
@@ -48,7 +51,7 @@ module OmniAuth
                        else
                          WmLib.new(:wmid => @credentials[:site_holder_wmid])
                        end
-        super(app, :webmoney, options)
+        super(app, :webmoney, opts)
       end
 
       def request_phase

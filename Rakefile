@@ -21,7 +21,7 @@ Jeweler::Tasks.new do |gem|
   gem.authors = ["Anton"]
   # Include your dependencies below. Runtime dependencies are required when using your gem,
   # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
-  gem.add_runtime_dependency 'webmoney', '> 0.0.10'
+  gem.add_runtime_dependency 'webmoney', '~> 0.0.10'
   gem.add_development_dependency 'rspec', '> 2.5.02.5.0'
 end
 Jeweler::RubygemsDotOrgTasks.new

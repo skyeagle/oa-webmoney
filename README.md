@@ -1,82 +1,75 @@
 = oa-webmoney
 
-=== Usage
+=== Usage with Devise
 
-You trigger an Webmoney request similar to HTTP authentication. From your app,
-return a "401 Unauthorized" and a "WWW-Authenticate" header with the identifier you would like to validate.
+Original help page[https://github.com/plataformatec/devise/wiki/OmniAuth:-Overview]
 
-On competition, the Webmoney response is automatically verified and assigned to
-<tt>env["rack.webmoney.response"]</tt>.
+Gemfile
 
-=== Rails 3 Example
+  gem 'oa-webmoney'
 
-application.rb
+adding wmid column:
 
-  ...
-  config.middleware.insert_before(Warden::Manager, Rack::Webmoney,
-    :credentials => {:app_rids => { 'example.com' => 'your_site_rid' }, :site_holder_wmid => 'your_site_holder_wmid'},
-    :mode => Rails.env)
-  ...
+  rails g migration add_wmid_to_user
 
-=== Rack Example
+and add this:
 
-  MyApp = lambda { |env|
-    if resp = env["rack.webmoney.response"]
-      case resp.status
-      when :successful
-        ...
-      else
-        ...
-    else
-      [401, {"WWW-Authenticate" => 'Webmoney"}, []]
-    end
-  }
+  def self.up
+    add_column :users, :wmid, :string, :limit => 12
 
-  use Rack::Webmoney, :credentials => {:app_rids => { 'example.com' => 'your_site_rid' }, :site_holder_wmid => 'your_site_holder_wmid'}, :mode => "development_OR_test_FOR_TESTING"
-  run MyApp
-
-=== Sinatra Example
-
-  # Session needs to be before Rack::OpenID
-  use Rack::Session::Cookie
-
-  require 'rack/webmoney'
-  use Rack::Webmoney, :credentials => {:app_rids => { 'example.com' => 'your_site_rid' }, :site_holder_wmid => 'your_site_holder_wmid'}, :mode => "development_OR_test_FOR_TESTING"
-
-  get '/login' do
-    erb :login
+    add_index :users, :wmid, :unique => true
   end
 
-  post '/login' do
-    if resp = request.env["rack.webmoney.response"]
-      if resp.status == :successful
-        "Welcome: #{resp.display_identifier}"
+  def self.down
+    remove_column :users, :wmid
+  end
+
+devise.rb
+
+  config.omniauth :webmoney, :credentials => { :site_holder_wmid => 'your_site_wmid',
+                      :app_rids => { 'localhost'   => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+                                     'example.com' => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' }}, :mode => Rails.env)
+
+user.rb
+
+  devise :omniauthable
+
+  def self.find_for_webmoney_oauth(access_token, signed_in_resource=nil)
+    data = access_token['extra']
+    if user = User.find_by_wmid(data[:WmLogin_WMID])
+      user
+    else # Create an user with a stub password.
+      User.create!(:email => "#{data[:WmLogin_WMID]}@wmkeeper.com", :password => Devise.friendly_token[0,20])
+    end
+  end
+
+add link to authorize:
+
+  <%= link_to "Sign in with Webmoney", user_omniauth_authorize_path(:webmoney) %>
+
+routes.rb
+
+  devise_for :users, :controllers => { :omniauth_callbacks => "users/omniauth_callbacks" }
+
+app/controllers/users/omniauth_callbacks_controller.rb
+
+  class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
+    def webmoney
+      # You need to implement the method below in your model
+      @user = User.find_for_webmoney_oauth(env["omniauth.auth"], current_user)
+
+      if @user.persisted?
+        flash[:notice] = I18n.t "devise.omniauth_callbacks.success", :kind => "Webmoney"
+        sign_in_and_redirect @user, :event => :authentication
       else
-        "#{resp.status}: #{resp.message}"
+        session["devise.webmoney_data"] = env["omniauth.auth"]
+        redirect_to new_user_registration_url
       end
-    else
-      headers 'WWW-Authenticate' => Rack::Webmoney.build_header({})
-      throw :halt, [401, 'got webmoney?']
     end
   end
-
-  use_in_file_templates!
-
-  __END__
-
-  @@ login
-  <form action="/login" method="post">
-    <p>
-      <input style="display:none;" name="auth_provider" type="text" value="webmoney"/>
-    </p>
-
-    <p>
-      <input name="commit" type="submit" value="Sign in" />
-    </p>
-  </form>
 
 == Contributing to oa-webmoney
- 
+
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet
 * Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it
 * Fork the project
