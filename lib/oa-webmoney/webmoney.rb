@@ -40,8 +40,11 @@ module OmniAuth
         # 12
         :user_blocked         => "The user is temporarily blocked. Probably made the selection Ticket",
         # 201
-        :ip_differs           => "Ip address in the request differs from the address, which was an authorized user"
+        :ip_differs           => "Ip address in the request differs from the address, which was an authorized user",
+
+        :canceled             => "Authorization was canceled by user"
       }
+      attr_reader :credentials, :mode, :wm_instance
 
       def initialize(app, opts = {})
         @credentials = opts[:credentials]
@@ -61,7 +64,11 @@ module OmniAuth
       end
 
       def callback_phase
-        wminfo =
+        if request.params["WmLogin_KeeperRetStr"] == "Canceled"
+          return fail!(:canceled, ERROR_MESSAGES[:canceled])
+        end
+
+        @wminfo =
           { :WmLogin_Ticket      => request.params["WmLogin_Ticket"],
             :WmLogin_UrlID       => request.params["WmLogin_UrlID"],
             :WmLogin_Expire      => request.params["WmLogin_Expires"],
@@ -72,9 +79,9 @@ module OmniAuth
             :WmLogin_UserAddress => request.params["WmLogin_UserAddress"] }
 
         # work around for local development
-        ip_to_check = %w(development test).include?(mode) ? wminfo[:WmLogin_UserAddress] : request.ip
+        ip_to_check = %w(development test).include?(mode) ? @wminfo[:WmLogin_UserAddress] : request.ip
 
-        check_req_params = wminfo.merge({:remote_ip => ip_to_check})
+        check_req_params = @wminfo.merge({:remote_ip => ip_to_check})
 
         begin
           response = wm_instance.request(:login, check_req_params)[:retval]
