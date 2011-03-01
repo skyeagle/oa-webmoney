@@ -86,10 +86,8 @@ module OmniAuth
         begin
           response = wm_instance.request(:login, check_req_params)[:retval]
         rescue Errno::ECONNRESET, Errno::ECONNREFUSED, Timeout::Error => e
-          logger.info("Rack webmoney exception: #{e}")
           response = -2
         rescue ::Webmoney::ResultError => e
-          logger.info("Rack webmoney exception: #{e}")
           response = wm_instance.error
         end
 
