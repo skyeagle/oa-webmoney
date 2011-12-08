@@ -1,5 +1,6 @@
 require 'omniauth/core'
 require 'webmoney'
+
 module OmniAuth
   module Strategies
     class Webmoney
@@ -44,22 +45,16 @@ module OmniAuth
 
         :canceled             => "Authorization was canceled by user"
       }
-      attr_reader :credentials, :mode, :wm_instance
 
-      def initialize(app, opts = {})
-        @credentials = opts[:credentials]
-        @mode = opts[:mode]
-        @wm_instance = if defined?(Rails)
-                         Rails.webmoney
-                       else
-                         WmLib.new(:wmid => @credentials[:site_holder_wmid])
-                       end
-        super(app, :webmoney, opts)
-      end
+      option :credentials
+      option :env, :production
+      option :wm_instance
+      option :fields, [:WmLogin_Ticket, :WmLogin_UrlID, :WmLogin_Expire, :WmLogin_AuthType,
+                       :WmLogin_LastAccess, :WmLogin_Created, :WmLogin_WMID, :WmLogin_UserAddress]
 
       def request_phase
         r = Rack::Response.new
-        r.redirect "https://login.wmtransfer.com/GateKeeper.aspx?RID=#{credentials[:app_rids][request.host]}"
+        r.redirect "https://login.wmtransfer.com/GateKeeper.aspx?RID=#{options[:credentials][:app_rids][request.host]}"
         r.finish
       end
 
@@ -68,27 +63,19 @@ module OmniAuth
           return fail!(:canceled, ERROR_MESSAGES[:canceled])
         end
 
-        @wminfo =
-          { :WmLogin_Ticket      => request.params["WmLogin_Ticket"],
-            :WmLogin_UrlID       => request.params["WmLogin_UrlID"],
-            :WmLogin_Expire      => request.params["WmLogin_Expires"],
-            :WmLogin_AuthType    => request.params["WmLogin_AuthType"],
-            :WmLogin_LastAccess  => request.params["WmLogin_LastAccess"],
-            :WmLogin_Created     => request.params["WmLogin_Created"],
-            :WmLogin_WMID        => request.params["WmLogin_WMID"],
-            :WmLogin_UserAddress => request.params["WmLogin_UserAddress"] }
-
         # work around for local development
-        ip_to_check = %w(development test).include?(mode) ? @wminfo[:WmLogin_UserAddress] : request.ip
+        ip_to_check = [:development, :test].include?(options[:env].to_sym) ? extra[:WmLogin_UserAddress] : request.ip
 
-        check_req_params = @wminfo.merge({:remote_ip => ip_to_check})
+        check_req_params = extra.merge({:remote_ip => ip_to_check})
+
+        options[:wm_instance] ||= WmLib.new(:wmid => options[:credentials][:site_holder_wmid])
 
         begin
-          response = wm_instance.request(:login, check_req_params)[:retval]
+          response = options[:wm_instance].request(:login, check_req_params)[:retval]
         rescue Errno::ECONNRESET, Errno::ECONNREFUSED, Timeout::Error => e
           response = -2
         rescue ::Webmoney::ResultError => e
-          response = wm_instance.error
+          response = options[:wm_instance].error
         end
 
         status = case response
@@ -116,10 +103,15 @@ module OmniAuth
         super
       end
 
-      def auth_hash
-        OmniAuth::Utils.deep_merge(super(), {
-          'uid' => @wminfo[:WmLogin_WMID],
-          'extra' => @wminfo})
+      def uid
+        extra[:WmLogin_WMID]
+      end
+
+      def extra
+        options.fields.inject({}) do |hash, field|
+          hash[field] = request.params[field.to_s]
+          hash
+        end
       end
     end
   end
