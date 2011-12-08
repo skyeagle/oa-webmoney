@@ -26,9 +26,14 @@ and add code below to created migration:
 
 devise.rb
 
-    config.omniauth :webmoney, :credentials => { :site_holder_wmid => 'your_site_wmid',
-                        :app_rids => { 'localhost'   => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-                                       'example.com' => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' }}, :mode => Rails.env)
+    config.omniauth :webmoney,
+      :credentials => {
+        :site_holder_wmid => 'your_site_wmid',
+        :app_rids => {
+          'localhost'   => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+          'example.com' => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' }},
+      :env => Rails.env,
+      :wm_instance => Rails.webmoney #optional, if you have already used webmoney gem instance in your app
 
 user.rb
 
@@ -36,10 +41,10 @@ user.rb
 
     def self.find_for_webmoney_oauth(access_token, signed_in_resource=nil)
       data = access_token['extra']
-      if user = User.find_by_wmid(data[:WmLogin_WMID])
+      if user = User.find_by_wmid(data['WmLogin_WMID'])
         user
       else # Create an user with a stub password.
-        User.create!(:email => "#{data[:WmLogin_WMID]}@wmkeeper.com", :password => Devise.friendly_token[0,20])
+        User.create!(:email => "#{data['WmLogin_WMID']}@wmkeeper.com", :password => Devise.friendly_token[0,20])
       end
     end
 

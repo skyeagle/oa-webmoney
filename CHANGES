@@ -1,0 +1,3 @@
+0.1.0
+  * Refactored to respect omniauth 1.0.1
+  * options syntax changed
