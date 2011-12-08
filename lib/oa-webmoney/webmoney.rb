@@ -1,5 +1,6 @@
 require 'omniauth/core'
 require 'webmoney'
+
 module OmniAuth
   module Strategies
     class Webmoney
