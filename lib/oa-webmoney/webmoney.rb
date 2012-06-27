@@ -1,4 +1,4 @@
-require 'omniauth/core'
+require 'omniauth'
 require 'webmoney'
 
 module OmniAuth
