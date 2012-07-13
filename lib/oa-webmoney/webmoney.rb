@@ -60,7 +60,7 @@ module OmniAuth
 
       def callback_phase
         if request.params["WmLogin_KeeperRetStr"] == "Canceled"
-          return fail!(:canceled, ERROR_MESSAGES[:canceled])
+          return fail!(:canceled, OmniAuth::Error.new(ERROR_MESSAGES[:canceled]))
         end
 
         # work around for local development
@@ -98,7 +98,7 @@ module OmniAuth
         when 201 then :ip_differs
         end
 
-        return fail!(status, ERROR_MESSAGES[status]) unless status == :successful
+        return fail!(status, OmniAuth::Error.new(ERROR_MESSAGES[status])) unless status == :successful
 
         super
       end
