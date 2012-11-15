@@ -1,3 +1,4 @@
+require 'ipaddr'
 require 'omniauth'
 require 'webmoney'
 
@@ -58,13 +59,18 @@ module OmniAuth
         r.finish
       end
 
+      def trusted_addr?(addr)
+        return false unless options[:credentials][:trusted_addr]
+        !!options[:credentials][:trusted_addr].map{|net| IPAddr.new(net)}.detect{|net| net.include?(IPAddr.new(addr))}
+      end
+
       def callback_phase
         if request.params["WmLogin_KeeperRetStr"] == "Canceled"
           return fail!(:canceled, OmniAuth::Error.new(ERROR_MESSAGES[:canceled]))
         end
 
-        # work around for local development
-        ip_to_check = [:development, :test].include?(options[:env].to_sym) ? extra[:WmLogin_UserAddress] : request.ip
+        # workaround for local development
+        ip_to_check = trusted_addr?(request.ip) ? extra[:WmLogin_UserAddress] : request.ip
 
         check_req_params = extra.merge({:remote_ip => ip_to_check})
 

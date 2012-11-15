@@ -32,6 +32,7 @@ devise.rb
         :app_rids => {
           'localhost'   => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
           'example.com' => 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' }},
+        :trusted_addr => %w(127.0.0.1 172.16.0.0/16)
       :env => Rails.env,
       :wm_instance => Rails.webmoney #optional, if you have already used webmoney gem instance in your app
 
