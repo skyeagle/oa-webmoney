@@ -40,11 +40,7 @@ module OmniAuth
         # 11
         :pwd_access_blocked   => "Password access to the service blocked",
         # 12
-        :user_blocked         => "The user is temporarily blocked. Probably made the selection Ticket",
-        # 201
-        :ip_differs           => "Ip address in the request differs from the address, which was an authorized user",
-
-        :canceled             => "Authorization was canceled by user"
+        :user_blocked         => "The user is temporarily blocked. Probably made the selection Ticket"
       }
 
       option :credentials
@@ -59,20 +55,10 @@ module OmniAuth
         r.finish
       end
 
-      def trusted_addr?(addr)
-        return false unless options[:credentials][:trusted_addr]
-        !!options[:credentials][:trusted_addr].map{|net| IPAddr.new(net)}.detect{|net| net.include?(IPAddr.new(addr))}
-      end
-
       def callback_phase
-        if request.params["WmLogin_KeeperRetStr"] == "Canceled"
-          return fail!(:canceled, OmniAuth::Error.new(ERROR_MESSAGES[:canceled]))
-        end
+        return cancel_authentication! if cancel_authentication?
 
-        # workaround for local development
-        ip_to_check = trusted_addr?(request.ip) ? extra[:WmLogin_UserAddress] : request.ip
-
-        check_req_params = extra.merge({:remote_ip => ip_to_check})
+        check_req_params = extra.merge({:remote_ip => extra[:WmLogin_UserAddress]})
 
         options[:wm_instance] ||= WmLib.new(:wmid => options[:credentials][:site_holder_wmid])
 
@@ -107,6 +93,16 @@ module OmniAuth
         return fail!(status, OmniAuth::Error.new(ERROR_MESSAGES[status])) unless status == :successful
 
         super
+      end
+
+      def cancel_authentication!
+        r = Rack::Response.new
+        r.redirect "/"
+        r.finish
+      end
+
+      def cancel_authentication?
+        %w(Canceled LoggedOff).include?(request.params["WmLogin_KeeperRetStr"])
       end
 
       def uid
