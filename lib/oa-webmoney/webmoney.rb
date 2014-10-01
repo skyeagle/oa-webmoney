@@ -43,6 +43,8 @@ module OmniAuth
         :user_blocked         => "The user is temporarily blocked. Probably made the selection Ticket"
       }
 
+      LOGIN_URL = "https://login.wmtransfer.com/GateKeeper.aspx"
+
       option :credentials
       option :env, :production
       option :wm_instance
@@ -51,7 +53,12 @@ module OmniAuth
 
       def request_phase
         r = Rack::Response.new
-        r.redirect "https://login.wmtransfer.com/GateKeeper.aspx?RID=#{options[:credentials][:app_rids][request.host]}"
+        params = {
+          RID: options[:credentials][:app_rids][request.host]
+        }.merge(request.params.slice('wmid', 'quiet'))
+
+        redirect_url = "#{LOGIN_URL}?#{params.to_query}"
+        r.redirect redirect_url
         r.finish
       end
 
