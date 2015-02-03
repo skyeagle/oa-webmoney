@@ -12,7 +12,7 @@ module OmniAuth
 
       ERROR_MESSAGES = {
         # -3 unknown response
-        :server_not_available => "Unknown response",
+        :unknown_response => "Unknown response",
         # -2 raised network error
         :server_not_available => "Sorry, the Webmoney Login server is not available",
         # -1
